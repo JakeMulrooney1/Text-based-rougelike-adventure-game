@@ -2,7 +2,7 @@ import time
 import random
 from helpers import slow_print, random_armour_drop
 
-def event_goblin(player):  
+def event_goblin(player, *args):  
     slow_print("\n --- EVENT: A Goblin in the Shadows ---")
     time.sleep(.5)
     slow_print("The battlefield falls silent. The last echo of the creature's roar fades into the mist.")
@@ -44,7 +44,7 @@ C) Kick the sack aside""")
             slow_print("Invalid choice! Please type \"A\", \"B\", or \"C\"!")
     return False
 
-def event_attack_tome(player):
+def event_attack_tome(player, *args):
     slow_print("\n --- EVENT: Knowledge of a Warrior ---")
     time.sleep(.5)
     slow_print("After wandering for what seems like days, you come across an abandoned cabin.")
@@ -71,7 +71,7 @@ def event_attack_tome(player):
             slow_print("Invalid choice! Please type \"Yes\" or \"No\"!")
     return False
 
-def event_hobbits(player):
+def event_hobbits(player, *args):
     slow_print("\n --- EVENT: Tricksy little Hobbitses ---")
     time.sleep(.5)
     slow_print("The putrid smell of orc guts seems to coat everything")
