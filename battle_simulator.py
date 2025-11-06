@@ -2,7 +2,7 @@ import time
 import random
 
 #import helper functions and events
-from helpers import slow_print, random_armour_drop
+from helpers import slow_print, random_armour_drop, apply_poison, apply_burn, apply_paralysis, apply_freeze, process_status_effects
 from events import event_goblin, event_attack_tome, event_hobbits, event_armour
 
 class Player:
@@ -22,6 +22,11 @@ class Player:
         self.base_mana = mana
         self.unlocked_spells = ["fireball"]
         self.gold = 0
+
+        self.poisoned = False
+        self.burned = False
+        self.paralysed = False
+        self.frozen = False
         
     def take_damage(self, damage):
         """
@@ -50,26 +55,26 @@ stats = {
 
 #List of enemy dictionaries contating name, HP, and attack
 enemies = [
-    {"name": "Orc", "hp": 8, "base_hp": 8, "attack": 2},
-    {"name": "Goblin", "hp": 10, "base_hp": 10, "attack": 3},
-    {"name": "Bandit", "hp": 6, "base_hp": 6, "attack": 5},
-    {"name": "Warg", "hp": 10, "base_hp": 10, "attack": 5},
-    {"name": "Zombie", "hp": 6, "base_hp": 6, "attack": 6},
-    {"name": "Skeleton Warrior", "hp": 11, "base_hp": 11, "attack": 5},
-    {"name": "Giant Rat", "hp": 8, "base_hp": 8, "attack": 5},
-    {"name": "Ghoul", "hp": 10, "base_hp": 10, "attack": 6},
-    {"name": "Imp", "hp": 11, "base_hp": 11, "attack": 6},
-    {"name": "Troll", "hp": 15, "base_hp": 15, "attack": 8},
-    {"name": "Gremlin", "hp": 12, "base_hp": 12, "attack": 6},
-    {"name": "Golem", "hp": 15, "base_hp": 15, "attack": 7},
-    {"name": "Banshee", "hp": 8, "base_hp": 8, "attack": 10},
-    {"name": "Orc Chieftan", "hp": 15, "base_hp": 15, "attack": 10},
-    {"name": "Giant Spider", "hp": 15, "base_hp": 15, "attack": 8},
-    {"name": "Ogre", "hp": 17, "base_hp": 17, "attack": 12},
-    {"name": "Dark Sorceror", "hp": 15, "base_hp": 15, "attack": 13},
-    {"name": "Flame Elemental", "hp": 18, "base_hp": 18, "attack": 13},
-    {"name": "Frost Troll", "hp": 20, "base_hp": 20, "attack": 15},
-    {"name": "Dark Knight", "hp": 25, "base_hp": 25, "attack": 20}
+    {"name": "Orc", "hp": 8, "base_hp": 8, "attack": 2, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Goblin", "hp": 10, "base_hp": 10, "attack": 3, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Bandit", "hp": 6, "base_hp": 6, "attack": 5, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Warg", "hp": 10, "base_hp": 10, "attack": 5, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Zombie", "hp": 6, "base_hp": 6, "attack": 6, "poison": True, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Skeleton Warrior", "hp": 11, "base_hp": 11, "attack": 5, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Giant Rat", "hp": 8, "base_hp": 8, "attack": 5, "poison": True, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Ghoul", "hp": 10, "base_hp": 10, "attack": 6, "poison": False, "burn": False, "paralyse": True, "freeze": False},
+    {"name": "Imp", "hp": 11, "base_hp": 11, "attack": 6, "poison": False, "burn": True, "paralyse": False, "freeze": False},
+    {"name": "Troll", "hp": 15, "base_hp": 15, "attack": 8, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Gremlin", "hp": 12, "base_hp": 12, "attack": 6, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Golem", "hp": 15, "base_hp": 15, "attack": 7, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Banshee", "hp": 8, "base_hp": 8, "attack": 10, "poison": False, "burn": False, "paralyse": True, "freeze": False},
+    {"name": "Orc Chieftan", "hp": 15, "base_hp": 15, "attack": 10, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Giant Spider", "hp": 15, "base_hp": 15, "attack": 8, "poison": True, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Ogre", "hp": 17, "base_hp": 17, "attack": 12, "poison": False, "burn": False, "paralyse": False, "freeze": False},
+    {"name": "Dark Sorceror", "hp": 15, "base_hp": 15, "attack": 13, "poison": True, "burn": True, "paralyse": True, "freeze": True},
+    {"name": "Flame Elemental", "hp": 18, "base_hp": 18, "attack": 13, "poison": False, "burn": True, "paralyse": False, "freeze": False},
+    {"name": "Frost Troll", "hp": 20, "base_hp": 20, "attack": 15, "poison": False, "burn": False, "paralyse": False, "freeze": True},
+    {"name": "Dark Knight", "hp": 25, "base_hp": 25, "attack": 20, "poison": False, "burn": False, "paralyse": False, "freeze": False}
     
 ]
 
@@ -84,7 +89,10 @@ all_spells = [
 shopkeeper_items = [
     {"name": "Potion of Healing", "cost": 5},
     {"name": "Potion of Mana Regeneration", "cost": 5},
-    {"name": "Elixir of Strength", "cost": 5}
+    {"name": "Elixir of Strength", "cost": 5},
+    {"name": "Antidote", "cost": 5},
+    {"name": "Burn Heal", "cost": 5},
+    {"name": "Paralyse Heal", "cost": 5}
 ]
 
 #player's equipped armour slots initalised as empty
@@ -98,6 +106,18 @@ all_armour = [
     {"name": "Leather Helmet", "defence": 1, "slot": "head"},
     {"name": "Leather Chestplate", "defence": 1, "slot": "body"},
     {"name": "Leather Greaves", "defence": 1, "slot": "legs"},
+    {"name": "Iron Helmet", "defence": 2, "slot": "head"},
+    {"name": "Iron Chestplate", "defence": 2, "slot": "body"},
+    {"name": "Iron Greaves", "defence": 2, "slot": "legs"},
+    {"name": "Chainmail Helmet", "defence": 3, "slot": "head"},
+    {"name": "Chainmail Chestplate", "defence": 3, "slot": "body"},
+    {"name": "Chainmail Greaves", "defence": 3, "slot": "legs"},
+    {"name": "Obsidian Helmet", "defence": 4, "slot": "head"},
+    {"name": "Obsidian Chestplate", "defence": 4, "slot": "body"},
+    {"name": "Obsidian Greaves", "defence": 4, "slot": "legs"},
+    {"name": "Ethereal Helmet", "defence": 5, "slot": "head"},
+    {"name": "Ethereal Chestplate", "defence": 5, "slot": "body"},
+    {"name": "Ethereal Greaves", "defence": 5, "slot": "legs"},
 ]
 
 def equip_armour(player_armour, item):
@@ -211,6 +231,27 @@ def enemy_attack(player, enemy):
     slow_print(f"The enemy {enemy['name']} attacks you for {enemy['attack']} damage!")
     time.sleep(.5)
     player.take_damage(enemy['attack'])
+
+    if enemy.get("poison") and random.randint(1, 10) == 1:
+        player.poisoned = True
+        slow_print("You’ve been poisoned!")
+        time.sleep(.5)
+
+    if enemy.get("burn") and random.randint(1, 10) == 1:
+        player.burned = True
+        slow_print("You’ve been burned!")
+        time.sleep(.5)
+
+    if enemy.get("paralyse") and random.randint(1, 10) == 1:
+        player.paralysed = True
+        slow_print("You’ve been paralysed!")
+        time.sleep(.5)
+
+    if enemy.get("freeze") and random.randint(1, 10) == 1:
+        player.frozen = True
+        slow_print("You’ve been frozen!")
+        time.sleep(.5)
+    
     if player.hp <= 0:
         slow_print("You have died. Game Over.")
         return True
@@ -255,7 +296,7 @@ def shopkeeper():
 def events(player, armour_inventory, all_armour):
     """
     Randmoly triggers one of the imported game events.
-    Returns True is the event results in the player's death.
+    Returns True if the event results in the player's death.
     """
     events_list = [event_goblin, event_attack_tome, event_hobbits, event_armour]
     result = random.choice(events_list)(player, armour_inventory, all_armour)
@@ -287,6 +328,23 @@ while True:
         
         #Battle loop - runs while both player and enemy are alive
         while enemy['hp'] > 0 and player.hp > 0:
+
+            status = process_status_effects(player)
+            if status == "dead":
+                deaths += 1
+                player_dead = True
+                break  # end the fight because player died from status effects
+            elif status == "paralysed":
+                player_dead = enemy_attack(player, enemy)
+                if player_dead:
+                    deaths += 1
+                    break
+            elif status == "frozen":
+                player_dead = enemy_attack(player, enemy)
+                if player_dead:
+                    deaths += 1
+                    break
+                continue  
 
             #get equipped armour names, display "None" if no armour equipped
             head_name = player_armour['head']['name'] if player_armour['head'] else "None"
@@ -408,6 +466,7 @@ while True:
                         consumable_choice = input("> ").lower()
                         if consumable_choice == "back":
                             break
+                            
                         elif consumable_choice == "potion of healing" and "Potion of Healing" in consumable_inventory:
                             player.hp = min(player.hp + 10, player.base_hp)#Heal player by 10 (up to max)
                             consumable_inventory["Potion of Healing"] -= 1
@@ -415,6 +474,7 @@ while True:
                                 del consumable_inventory["Potion of Healing"]
                             slow_print(f"Your health increased by 10 to {player.hp}!")
                             time.sleep(1)
+                            
                         elif consumable_choice == "potion of mana regeneration" and "Potion of Mana Regeneration" in consumable_inventory:
                             player.mana = min(player.mana + 10, player.base_mana)#Restore 10 mana (up to max)
                             consumable_inventory["Potion of Mana Regeneration"] -= 1
@@ -422,6 +482,7 @@ while True:
                                 del consumable_inventory["Potion of Mana Regeneration"]
                             slow_print(f"Your mana increased by 10 to {player.mana}!")
                             time.sleep(1)
+                            
                         elif consumable_choice == "elixir of strength" and "Elixir of Strength" in consumable_inventory:
                             player.damage_multiplier = 1.5#Temporarily boost player damage for next attack
                             consumable_inventory["Elixir of Strength"] -= 1
@@ -429,6 +490,32 @@ while True:
                                 del consumable_inventory["Elixir of Strength"]
                             slow_print("Your next attack will do 50% more damage!")
                             time.sleep(1)
+
+                        # Heal status effects
+                        elif consumable_choice == "antidote" and "Antidote" in consumable_inventory:
+                            player.poisoned = False
+                            consumable_inventory["Antidote"] -= 1
+                            if consumable_inventory["Antidote"] == 0:
+                                del consumable_inventory["Antidote"]
+                            slow_print("You have been healed of posion!")
+                            time.sleep(1)
+                            
+                        elif consumable_choice == "burn heal" and "Burn Heal" in consumable_inventory:
+                            player.burned = False
+                            consumable_inventory["Burn Heal"] -= 1
+                            if consumable_inventory["Burn Heal"] == 0:
+                                del consumable_inventory["Burn Heal"]
+                            slow_print("You have been healed of your burn!")
+                            time.sleep(1)
+                            
+                        elif consumable_choice == "paralyse heal" and "Paralyse Heal" in consumable_inventory:
+                            player.paralysed = False
+                            consumable_inventory["Paralyse Heal"] -= 1
+                            if consumable_inventory["Paralyse Heal"] == 0:
+                                del consumable_inventory["Paralyse Heal"]
+                            slow_print("You have been healed of your paralysis!")
+                            time.sleep(1)
+                            
                         else:
                             slow_print("Invalid choice!. Please select an item from your inventory, and type \"back to return\"!")
                             
@@ -440,6 +527,7 @@ while True:
                             
                         for armour in armour_inventory:
                             slow_print(f"{armour['name']}")
+                            
                         slow_print("\n-Back")
                         armour_choice = input("> ").lower()
 
@@ -456,9 +544,7 @@ while True:
                         if selected_armour:
                             equip_armour(player_armour, selected_armour)
                         else:
-                            slow_print("Invalid choice! Please choose an option from your inventory.")
-                            
-                        
+                            slow_print("Invalid choice! Please choose an option from your inventory.")        
 
                     else:
                         slow_print("Invalid choice! Please choose an option from the menu.")
