@@ -48,3 +48,62 @@ def random_armour_drop(armour_inventory, all_armour):
     armour_inventory.append(armour_drop)
     slow_print(f"{armour_drop['name']} added to inventory!")
     time.sleep(.5)
+
+def apply_poison(player):
+    """
+    Inflicts poision damage to player each turn.
+    """
+    damage = 2
+    player.hp -= damage
+    slow_print(f"You suffer {damage} poison damage!")
+    if player.hp <= 0:
+        slow_print("The poison overcomes you. You collapse...")
+
+def apply_burn(player):
+    """
+    Inflicts burn damage to player each turn.
+    """
+    damage = 3
+    player.hp -= damage
+    slow_print (f"You are burned for {damage} damage!")
+    if player.hp <= 0:
+        slow_print("Your burns are too much to bear. You collapse...")
+
+def apply_paralysis(player):
+    """
+    25% chance the player cannot move each turn.
+    """
+    if random.randint(1, 4) ==  1:
+        slow_print(f"You are paralysed and can’t move this turn!")
+        return True
+    return False
+
+def apply_freeze(player):
+    if random.randint(1, 3) == 1:
+        slow_print("You have thawed out and are no longer frozen!")
+        return False
+    else:
+        slow_print("You are frozen and cannot move!")
+        return True
+        
+
+def process_status_effects(player):
+    """Applies all active status effects to the player."""
+    if player.poisoned:
+        apply_poison(player)
+        if player.hp <= 0:
+            return "dead"
+            
+    if player.burned:
+        apply_burn(player)
+        if player.hp <= 0:
+            return "dead"
+
+    if player.paralysed:
+        if apply_paralysis(player):
+            return "paralysed"
+
+    if player.frozen:
+        if apply_freeze(player):
+            return "frozen"
+    return "ok"
